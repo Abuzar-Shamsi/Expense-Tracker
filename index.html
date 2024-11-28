@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expense Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* General styles */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      color: #333;
+      transition: background-color 0.3s, color 0.3s;
+      position: relative;
+    }
+
+    /* Dark mode styles */
+    body.dark-mode {
+      background-color: #2c2c2c;
+      color: white;
+    }
+
+    /* Container styles */
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* Header section */
+    .header {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+      align-items: center;
+      font-size: 30px;
+      font-weight: bold;
+    }
+
+    .header .button-container {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .header button {
+      padding: 10px 15px;
+      font-size: 14px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .header button:hover {
+      background-color: #45a049;
+    }
+
+    /* Form styles */
+    .form-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 30px;
+      gap: 15px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .form-container input,
+    .form-container select,
+    .form-container button {
+      padding: 12px;
+      margin: 5px;
+      width: 100%;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      transition: border 0.3s;
+    }
+
+    .form-container input:focus,
+    .form-container select:focus,
+    .form-container button:focus {
+      border: 1px solid #4CAF50;
+    }
+
+    .form-container .custom-category-container {
+      display: none;
+      width: 100%;
+    }
+
+    /* Table styles */
+    table {
+      width: 100%;
+      margin-top: 30px;
+      border-collapse: collapse;
+    }
+
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    tr:hover {
+      background-color: #f0f0f0;
+      cursor: pointer;
+    }
+
+    /* Total Section */
+    .total {
+      margin-top: 30px;
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background-color: white;
+      padding: 20px;
+      border-radius: 5px;
+      width: 50%;
+      max-height: 80%;
+      overflow-y: auto;
+    }
+
+    .modal-content ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .modal-content li {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-content li:hover {
+      background-color: #f0f0f0;
+    }
+
+    .modal-content button {
+      background-color: #ff4d4d;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    .modal-content button:hover {
+      background-color: #e60000;
+    }
+
+    /* Button Section */
+    .delete-btn, .dark-mode-toggle {
+      background-color: #4CAF50;
+    }
+
+    .delete-btn:hover, .dark-mode-toggle:hover {
+      background-color: #45a049;
+    }
+
+    /* Watermark */
+    .watermark {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      font-size: 14px;
+      color: rgba(0, 0, 0, 0.3);
+      pointer-events: none;
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header Section with Title -->
+  <div class="header">
+    Expense Tracker
+  </div>
+
+  <!-- Button Container for Print, Delete, Dark Mode -->
+  <div class="header .button-container">
+    <button onclick="printExpenses()">Print</button>
+    <button class="delete-btn" onclick="openDeleteModal()">Delete Expense</button>
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()" id="darkModeButton">Dark Mode On</button>
+    <button onclick="showGraph()">Show Graph</button>
+  </div>
+
+  <!-- Expense Form Section -->
+  <div class="form-container">
+    <input type="text" id="expenseName" placeholder="Expense Name" required>
+    <input type="number" id="expenseAmount" placeholder="Amount" required>
+    <input type="text" id="expenseDescription" placeholder="Description (Optional)">
+    <select id="expenseCategory" onchange="toggleCustomCategory()">
+      <option value="Basic">Basic</option>
+      <option value="Transportation">Transportation</option>
+      <option value="Food">Food</option>
+      <option value="Medical">Medical</option>
+      <option value="Stationery">Stationery</option>
+      <option value="With Friends">With Friends</option>
+      <option value="Water">Water</option>
+      <option value="Custom">Custom Category</option>
+    </select>
+    <div id="customCategoryContainer" class="custom-category-container">
+      <input type="text" id="customCategoryName" placeholder="Enter Custom Category Name">
+    </div>
+    <button onclick="addExpense()">Add Expense</button>
+  </div>
+
+  <!-- Budget Alert Section -->
+  <div>
+    <label for="dailyBudget">Set Daily Budget (₹):</label>
+    <input type="number" id="dailyBudget" value="150" placeholder="Enter daily budget">
+  </div>
+  <div id="budgetAlert" style="color: red; display: none;">
+    <strong>Alert:</strong> You have exceeded your daily budget of ₹150.
+  </div>
+
+  <!-- Expenses Table -->
+  <div class="expenses-list">
+    <table id="expensesTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Amount</th>
+          <th>Category</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="expensesBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Total amount -->
+  <div class="total" id="totalAmount">Total: ₹0</div>
+
+  <!-- Canvas for the chart -->
+  <canvas id="expenseChart" style="width:100%; height:400px; display:none;"></canvas>
+</div>
+
+<!-- Modal for Delete Expense -->
+<div id="deleteModal" class="modal">
+  <div class="modal-content">
+    <h2>Delete Expense</h2>
+    <ul id="deleteExpenseList"></ul>
+    <button onclick="deleteAllExpenses()">Delete All</button>
+    <button onclick="closeDeleteModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- Watermark -->
+<div class="watermark">
+  Developed by Fast Strip
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.6/xlsx.full.min.js"></script>
+
+<script>
+  let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+  let totalAmount = expenses.reduce((acc, expense) => acc + expense.amount, 0);
+
+  // Initialize table and total amount
+  updateExpensesTable();
+
+  // Function to add an expense
+  function addExpense() {
+    const name = document.getElementById('expenseName').value;
+    const amount = parseFloat(document.getElementById('expenseAmount').value);
+    const description = document.getElementById('expenseDescription').value;
+    const category = document.getElementById('expenseCategory').value;
+    const customCategoryName = document.getElementById('customCategoryName').value;
+    const categoryName = category === 'Custom' ? customCategoryName : category;
+
+    if (name && amount) {
+      const expense = {
+        name,
+        amount,
+        description,
+        category: categoryName,
+        date: new Date().toLocaleString()
+      };
+
+      expenses.push(expense);
+      localStorage.setItem('expenses', JSON.stringify(expenses));
+      totalAmount += amount;
+
+      updateExpensesTable();
+      checkBudgetAlert();
+    }
+  }
+
+  // Function to toggle custom category input field visibility
+  function toggleCustomCategory() {
+    const customCategoryContainer = document.getElementById('customCategoryContainer');
+    const category = document.getElementById('expenseCategory').value;
+    customCategoryContainer.style.display = category === 'Custom' ? 'block' : 'none';
+  }
+
+  // Function to update the expenses table and total amount
+  function updateExpensesTable() {
+    const tableBody = document.getElementById('expensesBody');
+    tableBody.innerHTML = '';
+    expenses.forEach((expense, index) => {
+      const row = tableBody.insertRow();
+      row.insertCell(0).textContent = expense.name;
+      row.insertCell(1).textContent = expense.description || '-';
+      row.insertCell(2).textContent = `₹${expense.amount.toFixed(2)}`;
+      row.insertCell(3).textContent = expense.category;
+      row.insertCell(4).textContent = expense.date;
+    });
+
+    // Update total amount
+    document.getElementById('totalAmount').textContent = `Total: ₹${totalAmount.toFixed(2)}`;
+  }
+
+  // Function to check if the daily budget is exceeded
+  function checkBudgetAlert() {
+    const dailyBudget = parseFloat(document.getElementById('dailyBudget').value);
+    const expensesPerDay = groupExpensesByDate();
+
+    // Check if any day's total expenses exceed the daily budget
+    let alertTriggered = false;
+    for (const date in expensesPerDay) {
+      const dailyTotal = expensesPerDay[date].reduce((acc, expense) => acc + expense.amount, 0);
+      if (dailyTotal > dailyBudget) {
+        alertTriggered = true;
+        break;
+      }
+    }
+
+    // Show or hide the budget alert
+    const alertElement = document.getElementById('budgetAlert');
+    if (alertTriggered) {
+      alertElement.style.display = 'block';
+    } else {
+      alertElement.style.display = 'none';
+    }
+  }
+
+  // Function to group expenses by date
+  function groupExpensesByDate() {
+    return expenses.reduce((acc, expense) => {
+      const date = expense.date.split(',')[0]; // Use just the date part, not the time
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(expense);
+      return acc;
+    }, {});
+  }
+
+  // Function to show the graph
+  function showGraph() {
+    const chartCanvas = document.getElementById('expenseChart');
+    chartCanvas.style.display = 'block'; // Display the chart canvas
+
+    const labels = expenses.map(expense => expense.date); // Use expense dates as labels
+    const amounts = expenses.map(expense => expense.amount); // Use expense amounts as data
+
+    // Create the chart
+    const ctx = chartCanvas.getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Expense Amount (₹)',
+          data: amounts,
+          backgroundColor: '#4CAF50',
+          borderColor: '#388E3C',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+  }
+
+  // Function to print expenses table and graph
+  function printExpenses() {
+    const printWindow = window.open('', '', 'width=800,height=600');
+    printWindow.document.write('<html><head><title>Print Expenses</title>');
+    printWindow.document.write('<style>table {width: 100%; border-collapse: collapse;} table, th, td {border: 1px solid #ddd;} th, td {padding: 8px;} th {background-color: #4CAF50; color: white;} body {font-family: Arial, sans-serif;} .watermark {position: fixed; bottom: 10px; left: 10px; font-size: 14px; color: rgba(0, 0, 0, 0.3); pointer-events: none;} </style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write('<h2>Expense Report</h2>');
+    printWindow.document.write('<h3>Expenses Table</h3>');
+    printWindow.document.write(document.getElementById('expensesTable').outerHTML);
+    printWindow.document.write('<h3>Expense Graph</h3>');
+    printWindow.document.write('<img src="' + document.getElementById('expenseChart').toDataURL() + '" style="width:100%; max-width:600px;" />');
+    printWindow.document.write('<div class="watermark">Developed by Fast Strip</div>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.print();
+  }
+
+  // Function to open the modal for deleting expenses
+  function openDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    const deleteList = document.getElementById('deleteExpenseList');
+    deleteList.innerHTML = '';
+    expenses.forEach((expense, index) => {
+      const listItem = document.createElement('li');
+      listItem.textContent = `${expense.name} - ₹${expense.amount.toFixed(2)}`;
+      const deleteButton = document.createElement('button');
+      deleteButton.textContent = 'Delete';
+      deleteButton.onclick = () => deleteExpense(index);
+      listItem.appendChild(deleteButton);
+      deleteList.appendChild(listItem);
+    });
+    modal.style.display = 'flex';
+  }
+
+  // Function to close the delete modal
+  function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+  }
+
+  // Function to delete a specific expense
+  function deleteExpense(index) {
+    expenses.splice(index, 1);
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+    totalAmount = expenses.reduce((acc, expense) => acc + expense.amount, 0);
+    updateExpensesTable();
+    checkBudgetAlert();
+    closeDeleteModal();
+  }
+
+  // Function to delete all expenses
+  function deleteAllExpenses() {
+    expenses = [];
+    localStorage.setItem('expenses', JSON.stringify(expenses));
+    totalAmount = 0;
+    updateExpensesTable();
+    checkBudgetAlert();
+    closeDeleteModal();
+  }
+
+  // Function to toggle dark mode
+  function toggleDarkMode() {
+    const body = document.body;
+    body.classList.toggle('dark-mode');
+    const button = document.getElementById('darkModeButton');
+    if (body.classList.contains('dark-mode')) {
+      button.textContent = 'Dark Mode Off';
+    } else {
+      button.textContent = 'Dark Mode On';
+    }
+  }
+</script>
+
+</body>
+</html>
